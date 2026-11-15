@@ -5,21 +5,27 @@
 using namespace std;
 
 int getMenuChoice(int minimum, int maximum) {
-    int choice;
+    string input;
 
     while (true) {
         cout << "Enter your choice: ";
+        getline(cin, input);
 
-        if (cin >> choice && choice >= minimum && choice <= maximum) {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            return choice;
+        try {
+            size_t charactersRead;
+            int choice = stoi(input, &charactersRead);
+
+            // Reject entries with extra characters, like "2abc"
+            if (charactersRead == input.length() &&
+                choice >= minimum && choice <= maximum) {
+                return choice;
+            }
+        } catch (...) {
+            // The input was not a valid whole number.
         }
 
         cout << "Invalid choice. Please enter a number from "
              << minimum << " to " << maximum << ".\n";
-
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 }
 
