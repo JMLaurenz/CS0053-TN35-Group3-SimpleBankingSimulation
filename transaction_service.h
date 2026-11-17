@@ -7,17 +7,13 @@
 
 using namespace std;
 
-bool deposit(vector<Account>& accounts,
-             const string& accountNumber,
+bool deposit(vector<Account> &accounts, const string &accountNumber,
              double amount);
 
-bool withdraw(vector<Account>& accounts,
-              const string& accountNumber,
+bool withdraw(vector<Account> &accounts, const string &accountNumber,
               double amount);
 
-bool transfer(vector<Account>& accounts,
-              const string& senderAccount,
-              const string& receiverAccount,
-              double amount);
+bool transfer(vector<Account> &accounts, const string &senderAccount,
+              const string &receiverAccount, double amount);
 
 #endif

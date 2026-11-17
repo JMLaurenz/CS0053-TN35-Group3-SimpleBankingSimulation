@@ -7,21 +7,17 @@
 
 using namespace std;
 
-int findAccountIndex(const vector<Account>& accounts,
-                     const string& accountNumber);
+int findAccountIndex(const vector<Account> &accounts,
+                     const string &accountNumber);
 
-bool createAccount(vector<Account>& accounts,
-                   const Account& newAccount);
+bool createAccount(vector<Account> &accounts, const Account &newAccount);
 
-bool updateAccount(vector<Account>& accounts,
-                   const string& accountNumber,
-                   const string& newName,
-                   const string& newPin);
+bool updateAccount(vector<Account> &accounts, const string &accountNumber,
+                   const string &newName, const string &newPin);
 
-bool deactivateAccount(vector<Account>& accounts,
-                      const string& accountNumber);
+bool deactivateAccount(vector<Account> &accounts, const string &accountNumber);
 
-double getAccountBalance(const vector<Account>& accounts,
-                         const string& accountNumber);
+double getAccountBalance(const vector<Account> &accounts,
+                         const string &accountNumber);
 
 #endif
