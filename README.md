@@ -122,27 +122,4 @@ Run both applications from the project directory so they can find `accounts.csv`
 
 On Windows with MinGW, use `.exe` filenames when running the compiled programs.
 
-## Testing
 
-Run the business-logic tests:
-
-```bash
-g++ -std=c++17 member2_tests.cpp account_service.cpp storage.cpp transaction_service.cpp -o member2_tests
-./member2_tests
-```
-
-Run the complete integration test:
-
-```bash
-./integration_test.sh
-```
-
-The integration test uses a temporary fixture and exercises the actual administrator and customer executables. It verifies:
-
-- Transfer rejection when the recipient is inactive.
-- Administrator account search, activation, creation, deactivation, reports, and persistence.
-- Customer details, balance inquiry, deposit, withdrawal, transfer, history, profile update, and logout.
-- Transaction audit output and persisted account/transaction data.
-- Existing business-logic tests and the absence of failed test cases.
-
-The test does not modify the repository's sample `accounts.csv` or leave temporary build files behind.
