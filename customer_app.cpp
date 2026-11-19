@@ -1,133 +1,180 @@
+#include "account_service.h"
+#include "storage.h"
+#include "transaction_history.h"
+#include "transaction_service.h"
+#include "validation.h"
+
+#include <iomanip>
 #include <iostream>
 #include <string>
-#include <limits>
+#include <vector>
 
 using namespace std;
 
+namespace {
 int getMenuChoice(int minimum, int maximum) {
     string input;
-
     while (true) {
         cout << "Enter your choice: ";
         getline(cin, input);
-
         try {
-            size_t charactersRead;
+            size_t charactersRead = 0;
             int choice = stoi(input, &charactersRead);
-
-            // Reject entries with extra characters, like "2abc"
-            if (charactersRead == input.length() &&
-                choice >= minimum && choice <= maximum) {
-                return choice;
-            }
-        } catch (...) {
-            // The input was not a valid whole number.
-        }
-
-        cout << "Invalid choice. Please enter a number from "
-             << minimum << " to " << maximum << ".\n";
+            if (charactersRead == input.length() && isValidMenuChoice(choice, minimum, maximum)) return choice;
+        } catch (...) {}
+        cout << "Invalid choice. Please enter a number from " << minimum << " to " << maximum << ".\n";
     }
 }
 
-bool customerLogin() {
-    string accountNumber;
+string readRequiredText(const string& prompt) {
+    string value;
+    do {
+        cout << prompt;
+        getline(cin, value);
+        if (!isValidRequiredText(value)) cout << "This field cannot be empty.\n";
+    } while (!isValidRequiredText(value));
+    return value;
+}
+
+string readAccountNumber(const string& prompt) {
+    string value;
+    do {
+        value = readRequiredText(prompt);
+        if (!isValidAccountNumber(value)) cout << "Account number must contain digits only.\n";
+    } while (!isValidAccountNumber(value));
+    return value;
+}
+
+string readPin(const string& prompt) {
     string pin;
+    do {
+        pin = readRequiredText(prompt);
+        if (!isValidPin(pin)) cout << "PIN must contain exactly four digits.\n";
+    } while (!isValidPin(pin));
+    return pin;
+}
 
-    cout << "\n===== CUSTOMER LOGIN =====\n";
-    cout << "Account Number: ";
-    getline(cin, accountNumber);
-
-    cout << "PIN: ";
-    getline(cin, pin);
-
-    // Temporary login credentials for initial testing
-    if (accountNumber == "100001" && pin == "1234") {
-        cout << "\nLogin successful.\n";
-        return true;
+double readAmount(const string& prompt) {
+    string input;
+    double amount = 0.0;
+    while (true) {
+        cout << prompt;
+        getline(cin, input);
+        if (parsePositiveAmount(input, amount)) return amount;
+        cout << "Enter a valid amount greater than zero.\n";
     }
-
-    cout << "\nInvalid account number or PIN.\n";
-    return false;
 }
 
-void pauseScreen() {
-    cout << "\nPress Enter to continue...";
-    cin.get();
+void pauseScreen() { cout << "\nPress Enter to continue..."; cin.get(); }
+
+int authenticate(const vector<Account>& accounts, string& accountNumber) {
+    accountNumber = readAccountNumber("Account Number: ");
+    string pin = readPin("PIN: ");
+    int index = findAccountIndex(accounts, accountNumber);
+    if (index == -1 || !accounts[index].active || accounts[index].pin != pin) return -1;
+    return index;
 }
 
-void customerMenu() {
-    int choice;
+void showDetails(const Account& account) {
+    cout << "\n===== ACCOUNT DETAILS =====\n"
+         << "Account number: " << account.accountNumber << '\n'
+         << "Name: " << account.name << '\n'
+         << "Balance: $" << fixed << setprecision(2) << account.balance << '\n'
+         << "Status: " << (account.active ? "Active" : "Inactive") << '\n';
+}
+
+void showHistory(const vector<TransactionRecord>& transactions, const string& accountNumber) {
+    bool found = false;
+    for (const TransactionRecord& transaction : transactions) {
+        if (transaction.fromAccount != accountNumber && transaction.toAccount != accountNumber) continue;
+        found = true;
+        cout << transaction.timestamp << " | " << transaction.type
+             << " | From: " << transaction.fromAccount << " | To: " << transaction.toAccount
+             << " | Amount: $" << fixed << setprecision(2) << transaction.amount << '\n';
+    }
+    if (!found) cout << "No transaction history found.\n";
+}
+
+void persist(const vector<Account>& accounts, const vector<TransactionRecord>& transactions) {
+    if (!saveAccounts(accounts) || !saveTransactions(transactions)) cout << "Warning: data could not be saved.\n";
+}
+
+void customerMenu(vector<Account>& accounts, vector<TransactionRecord>& transactions, const string& accountNumber) {
     bool loggedIn = true;
-
     while (loggedIn) {
-        cout << "\n====================================\n";
-        cout << "       CUSTOMER BANKING SERVICE\n";
-        cout << "====================================\n";
-        cout << "1. View Account Details\n";
-        cout << "2. Check Balance\n";
-        cout << "3. Deposit Money\n";
-        cout << "4. Withdraw Money\n";
-        cout << "5. Transfer Money\n";
-        cout << "6. View Transaction History\n";
-        cout << "7. Update Personal Information\n";
-        cout << "8. Logout\n";
-        cout << "====================================\n";
+        int index = findAccountIndex(accounts, accountNumber);
+        if (index == -1 || !accounts[index].active) { cout << "Account is no longer active.\n"; return; }
 
-        choice = getMenuChoice(1, 8);
+        cout << "\n====================================\n       CUSTOMER BANKING SERVICE\n====================================\n"
+             << "1. View Account Details\n2. Check Balance\n3. Deposit Money\n4. Withdraw Money\n"
+             << "5. Transfer Money\n6. View Transaction History\n7. Update Personal Information\n8. Logout\n====================================\n";
 
-        switch (choice) {
-            case 1:
-                cout << "\n[To be connected to account_service.cpp]\n";
+        switch (getMenuChoice(1, 8)) {
+            case 1: showDetails(accounts[index]); pauseScreen(); break;
+            case 2: cout << "Current balance: $" << fixed << setprecision(2) << accounts[index].balance << '\n'; pauseScreen(); break;
+            case 3: {
+                double amount = readAmount("Deposit amount: ");
+                if (deposit(accounts, accountNumber, amount)) {
+                    addTransaction(transactions, "DEPOSIT", accountNumber, "", amount);
+                    persist(accounts, transactions);
+                    cout << "Deposit successful.\n";
+                } else cout << "Deposit failed.\n";
                 pauseScreen();
                 break;
-
-            case 2:
-                cout << "\n[To be connected to balance inquiry function]\n";
+            }
+            case 4: {
+                double amount = readAmount("Withdrawal amount: ");
+                if (withdraw(accounts, accountNumber, amount)) {
+                    addTransaction(transactions, "WITHDRAWAL", accountNumber, "", amount);
+                    persist(accounts, transactions);
+                    cout << "Withdrawal successful.\n";
+                } else cout << "Withdrawal failed: insufficient funds or inactive account.\n";
                 pauseScreen();
                 break;
-
-            case 3:
-                cout << "\n[To be connected to deposit function]\n";
+            }
+            case 5: {
+                string receiver = readAccountNumber("Recipient account number: ");
+                double amount = readAmount("Transfer amount: ");
+                if (transfer(accounts, accountNumber, receiver, amount)) {
+                    addTransaction(transactions, "TRANSFER", accountNumber, receiver, amount);
+                    persist(accounts, transactions);
+                    cout << "Transfer successful.\n";
+                } else cout << "Transfer failed: check the recipient, amount, and balance.\n";
                 pauseScreen();
                 break;
-
-            case 4:
-                cout << "\n[To be connected to withdrawal function]\n";
+            }
+            case 6: showHistory(transactions, accountNumber); pauseScreen(); break;
+            case 7: {
+                string name = readRequiredText("New name: ");
+                string pin = readPin("New PIN: ");
+                if (updateAccount(accounts, accountNumber, name, pin)) {
+                    persist(accounts, transactions);
+                    cout << "Personal information updated.\n";
+                } else cout << "Information could not be updated.\n";
                 pauseScreen();
                 break;
-
-            case 5:
-                cout << "\n[To be connected to transfer function]\n";
-                pauseScreen();
-                break;
-
-            case 6:
-                cout << "\n[To be connected to transaction history function]\n";
-                pauseScreen();
-                break;
-
-            case 7:
-                cout << "\n[To be connected to customer profile update function]\n";
-                pauseScreen();
-                break;
-
-            case 8:
-                cout << "\nCustomer logged out.\n";
-                loggedIn = false;
-                break;
+            }
+            case 8: loggedIn = false; cout << "Customer logged out.\n"; break;
         }
     }
 }
+} // namespace
 
 int main() {
-    cout << "====================================\n";
-    cout << "       SIMPLE BANKING SYSTEM\n";
-    cout << "====================================\n";
+    vector<Account> accounts = loadAccounts();
+    vector<TransactionRecord> transactions = loadTransactions();
+    string accountNumber;
 
-    if (customerLogin()) {
-        customerMenu();
+    cout << "====================================\n       SIMPLE BANKING SYSTEM\n====================================\n"
+         << "\n===== CUSTOMER LOGIN =====\n";
+    if (authenticate(accounts, accountNumber) == -1) {
+        cout << "\nInvalid account number or PIN, or the account is inactive.\n"
+             << "Customer application closed.\n";
+        return 0;
     }
 
+    cout << "\nLogin successful.\n";
+    customerMenu(accounts, transactions, accountNumber);
     cout << "\nCustomer application closed.\n";
     return 0;
 }
