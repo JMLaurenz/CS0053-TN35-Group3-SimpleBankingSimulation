@@ -1,109 +1,101 @@
 # Simple Banking Simulation
 
-A C++ console-based banking simulation for the CS0053 TN35 Group 3 project. The project is divided into two user-facing applications and reusable backend modules for account management, CSV storage, and banking transactions.
+A C++17 console-based banking simulation for the CS0053 TN35 Group 3 project. It contains separate administrator and customer applications, reusable account and transaction services, CSV persistence, validation, transaction history, and an executable integration test.
 
 ## Current implementation status
 
-The repository currently contains:
+The user-facing menus are connected to the backend services. The project currently supports:
 
-- Separate administrator and customer login screens.
-- Separate administrator and customer menu loops.
-- Input validation for menu choices, including rejection of values such as `2abc`.
-- Logout options for both applications.
-- Account creation, searching, updating, deactivation, and balance lookup functions in the account service.
-- CSV loading and saving with support for quoted fields, commas, escaped quotes, invalid-row handling, and Windows line endings.
-- Deposit, withdrawal, and transfer business logic.
-- Customer transaction history and administrator transaction audit views.
-- Bank summary reports for account and transaction totals.
-- Shared validation for account numbers, PINs, required text, and positive amounts.
-- Business-logic tests for valid transactions, insufficient funds, inactive accounts, and balance changes.
+- Administrator and customer authentication.
+- Account creation, listing, searching, updating, activation, and deactivation.
+- Customer account details and balance inquiries.
+- Deposits, withdrawals, and transfers with balance and account-status checks.
+- Customer transaction history and administrator transaction auditing.
+- Administrator bank reports showing account and balance totals.
+- CSV persistence for accounts and transactions.
+- Validation for menu choices, account numbers, four-digit PINs, required text, and finite monetary amounts.
+- Rollback of in-memory changes when account or transaction persistence fails.
 
-The customer and administrator menus are connected to the account, transaction, validation, and storage services. Account changes and transaction records are saved locally so they can be loaded again after restarting the application.
+The administrator username and password are classroom test credentials. They should be replaced with a safer authentication system in a production application.
 
-## User-facing applications
+## Customer application
 
-### Customer side: `customer_app.cpp`
+Run `customer_app` to access the customer interface. The customer must log in with an active account stored in `accounts.csv`.
 
-The customer application represents the banking kiosk or client interface. After a successful login, the customer menu provides the following pages/options:
+Menu options:
 
-1. **View Account Details** – displays the logged-in customer's account information and balance.
-2. **Check Balance** – displays the current balance.
-3. **Deposit Money** – validates the amount, deposits money, records the transaction, and saves the accounts.
-4. **Withdraw Money** – validates the amount, checks available funds, records the transaction, and saves the accounts.
-5. **Transfer Money** – validates the recipient and amount, transfers funds, records the transaction, and saves the accounts.
-6. **View Transaction History** – displays transactions involving the logged-in customer's account.
-7. **Update Personal Information** – updates the customer's name and PIN after validation.
-8. **Logout** – ends the customer menu loop.
+1. View account details without exposing the PIN.
+2. Check the current balance.
+3. Deposit a positive amount.
+4. Withdraw a positive amount when sufficient funds are available.
+5. Transfer a positive amount to another active account.
+6. View the logged-in account's transaction history.
+7. Update the logged-in customer's name and PIN.
+8. Log out.
 
-Current customer test credentials:
+The sample customer credentials are:
 
-- **Account number:** `100001`
-- **PIN:** `1234`
+```text
+Account number: 100001
+PIN: 1234
+```
 
-Customer authentication now uses `accounts.csv` and rejects missing, incorrect, or inactive accounts.
+An inactive account cannot log in or receive transactions. An administrator can reactivate it through **Update Account Information**.
 
-### Administrator side: `admin_app.cpp`
+## Administrator application
 
-The administrator application represents the bank staff interface. After a successful login, the administrator menu provides the following pages/options:
+Run `admin_app` to access the administrator interface.
 
-1. **Add Bank Account** – validates the account number, name, and PIN before creating an account.
-2. **View All Accounts** – displays all accounts and their active/inactive status.
-3. **Search Account** – finds and displays a specific account.
-4. **Update Account Information** – updates an active account's name and PIN.
-5. **Deactivate Account** – marks an account inactive without deleting its record.
-6. **View Bank Reports** – displays account totals, active/inactive counts, balances, and transaction totals.
-7. **Audit All Transactions** – displays every recorded transaction.
-8. **Logout** – ends the administrator menu loop.
+Test credentials:
 
-Current administrator test credentials:
+```text
+Username: admin
+Password: admin123
+```
 
-- **Username:** `admin`
-- **Password:** `admin123`
+Menu options:
 
-The administrator credentials are hard-coded for classroom testing and should be replaced with a safer authentication method in a production-quality system.
+1. Add a new bank account with validated account number, name, PIN, balance, and status.
+2. View all accounts without displaying PINs.
+3. Search for an account.
+4. Update account information, including changing an inactive account to active.
+5. Deactivate an account without permanently deleting its record.
+6. View a bank report containing account counts and total recorded balance.
+7. Audit all persisted transactions.
+8. Log out.
 
-## Project files
+## Data files
 
-| File | Responsibility |
-|---|---|
-| `admin_app.cpp` | Administrator login, menu display, menu validation, and logout loop. |
-| `customer_app.cpp` | Customer login, menu display, menu validation, and logout loop. |
-| `storage.h/.cpp` | `Account` structure and CSV loading/saving. |
-| `account_service.h/.cpp` | Account lookup, creation, updating, deactivation, and balance lookup. |
-| `transaction_service.h/.cpp` | Deposit, withdrawal, and transfer operations. |
-| `transaction_history.h/.cpp` | Transaction recording, CSV persistence, timestamps, customer history, and administrator audit data. |
-| `validation.h/.cpp` | Shared validation for menu choices, account numbers, PINs, required text, and positive amounts. |
-| `member2_tests.cpp` | Console tests for account and transaction business logic. |
-| `accounts.csv` | Runtime account data used by the storage functions. |
-| `transactions.csv` | Persisted transaction history. |
-
-## Account data format
-
-`accounts.csv` uses the following column order:
+`accounts.csv` uses the following columns:
 
 ```text
 accountNumber,name,pin,balance,active
 ```
 
-The `active` field uses `1` for an active account and `0` for an inactive account. `loadAccounts()` skips the header, blank lines, and invalid rows. `saveAccounts()` rewrites the target CSV file with the current vector of accounts.
+The `active` field uses `1` for active and `0` for inactive. Account saves include the header row and quote fields so names containing commas can be preserved.
 
-The default filename is `accounts.csv`, so the executable must be run from the directory containing that file, or a different path must be passed to `loadAccounts()` and `saveAccounts()`.
+`transactions.csv` is created after the first successful customer transaction and uses:
 
-`transactions.csv` stores `timestamp`, `type`, `fromAccount`, `toAccount`, and `amount`. It is created with a header and updated after successful deposits, withdrawals, and transfers.
+```text
+type,sourceAccount,destinationAccount,amount
+```
 
-## Backend rules programmers should know
+Transaction types are `DEPOSIT`, `WITHDRAW`, and `TRANSFER`. The transaction log is used by customer history and administrator audit functions.
 
-- Account numbers must be unique when using `createAccount()`.
-- `updateAccount()` refuses to update missing or inactive accounts.
-- `deactivateAccount()` marks an existing account inactive instead of deleting it.
-- Deposits and withdrawals must have an amount greater than zero.
-- Deposits, withdrawals, and transfers reject missing or inactive accounts.
-- A withdrawal fails when the account does not have enough money.
-- A transfer fails when the sender and receiver are the same, either account is missing/inactive, or the sender has insufficient funds.
-- Service functions modify the in-memory `vector<Account>`. Call `saveAccounts()` after a successful change to persist it.
-- `getAccountBalance()` returns `-1.0` when the account number is not found; callers should distinguish this from a valid balance.
-- PINs are currently stored as plain text in the CSV file. This is acceptable only for classroom testing and should not be used for real credentials.
-- Successful deposits, withdrawals, and transfers create transaction-history records.
+## Project files
+
+| File | Responsibility |
+|---|---|
+| `admin_app.cpp` | Administrator login, account management, reports, audit, and menu flow. |
+| `customer_app.cpp` | Customer login, account actions, transactions, history, and menu flow. |
+| `storage.h/.cpp` | Account structure and validated CSV account loading/saving. |
+| `account_service.h/.cpp` | Account lookup, creation, updating, activation, deactivation, and balance lookup. |
+| `transaction_service.h/.cpp` | Deposit, withdrawal, and transfer rules. |
+| `transaction_log.h/.cpp` | Transaction record persistence and history data. |
+| `validation.h/.cpp` | Shared input and amount validation. |
+| `member2_tests.cpp` | Business-logic tests for transaction rules. |
+| `integration_test.sh` | End-to-end test for both applications and persistence. |
+| `accounts.csv` | Sample account data. |
 
 ## Building and running
 
@@ -112,23 +104,16 @@ Use a C++17-compatible compiler such as `g++`.
 Build the administrator application:
 
 ```bash
-g++ -std=c++17 admin_app.cpp account_service.cpp storage.cpp transaction_service.cpp transaction_history.cpp validation.cpp -o admin_app
+g++ -std=c++17 admin_app.cpp account_service.cpp storage.cpp transaction_log.cpp validation.cpp -o admin_app
 ```
 
 Build the customer application:
 
 ```bash
-g++ -std=c++17 customer_app.cpp account_service.cpp storage.cpp transaction_service.cpp transaction_history.cpp validation.cpp -o customer_app
+g++ -std=c++17 customer_app.cpp account_service.cpp storage.cpp transaction_log.cpp transaction_service.cpp validation.cpp -o customer_app
 ```
 
-Build and run the business-logic tests:
-
-```bash
-g++ -std=c++17 member2_tests.cpp account_service.cpp storage.cpp transaction_service.cpp validation.cpp -o member2_tests
-./member2_tests
-```
-
-Run an application from the project directory so it can find `accounts.csv`:
+Run both applications from the project directory so they can find `accounts.csv` and `transactions.csv`:
 
 ```bash
 ./admin_app
@@ -137,24 +122,27 @@ Run an application from the project directory so it can find `accounts.csv`:
 
 On Windows with MinGW, use `.exe` filenames when running the compiled programs.
 
-## Further recommended improvements
+## Testing
 
-For a stronger production-quality version, programmers should:
+Run the business-logic tests:
 
-1. Replace hard-coded administrator credentials with a safer authentication method.
-2. Add account restoration or permanent deletion if required by the final project scope.
-3. Add stronger automated tests for malformed CSV rows and persistence failures.
-4. Move repeated input and display helpers into reusable modules.
-5. Avoid storing PINs as plain text in a production system.
+```bash
+g++ -std=c++17 member2_tests.cpp account_service.cpp storage.cpp transaction_service.cpp -o member2_tests
+./member2_tests
+```
 
-## Testing notes
+Run the complete integration test:
 
-`member2_tests.cpp` uses an in-memory set of accounts, so it does not modify `accounts.csv`. The tests currently cover:
+```bash
+./integration_test.sh
+```
 
-- A valid deposit and updated balance.
-- A valid withdrawal and updated balance.
-- A withdrawal greater than the available balance.
-- A valid transfer and both resulting balances.
-- A transfer to an inactive account.
+The integration test uses a temporary fixture and exercises the actual administrator and customer executables. It verifies:
 
-Additional tests should cover malformed CSV rows, duplicate account numbers, negative and zero amounts, missing accounts, inactive-account logins, persistence after saving, and customer permission boundaries.
+- Transfer rejection when the recipient is inactive.
+- Administrator account search, activation, creation, deactivation, reports, and persistence.
+- Customer details, balance inquiry, deposit, withdrawal, transfer, history, profile update, and logout.
+- Transaction audit output and persisted account/transaction data.
+- Existing business-logic tests and the absence of failed test cases.
+
+The test does not modify the repository's sample `accounts.csv` or leave temporary build files behind.

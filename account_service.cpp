@@ -28,8 +28,21 @@ bool updateAccount(vector<Account> &accounts, const string &accountNumber,
     return false;
   }
 
+  return updateAccount(accounts, accountNumber, newName, newPin, true);
+}
+
+bool updateAccount(vector<Account> &accounts, const string &accountNumber,
+                   const string &newName, const string &newPin,
+                   bool active) {
+  int index = findAccountIndex(accounts, accountNumber);
+
+  if (index == -1) {
+    return false;
+  }
+
   accounts[index].name = newName;
   accounts[index].pin = newPin;
+  accounts[index].active = active;
 
   return true;
 }

@@ -20,4 +20,7 @@ bool isValidRequiredText(const string& text);
 // Parses a positive, finite amount. On failure, amount is not changed.
 bool parsePositiveAmount(const string& input, double& amount);
 
+// Parses a non-negative, finite amount. On failure, amount is not changed.
+bool parseNonNegativeAmount(const string& input, double& amount);
+
 #endif
