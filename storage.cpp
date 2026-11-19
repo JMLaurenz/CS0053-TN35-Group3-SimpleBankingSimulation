@@ -1,6 +1,7 @@
 #include "storage.h"
 
 #include <fstream>
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -91,6 +92,8 @@ bool parseAccountRow(const string& line, Account& account) {
         double balance = stod(balanceText, &charactersRead);
 
         if (charactersRead != balanceText.length() ||
+            !isfinite(balance) || balance < 0.0 ||
+            accountNumber.empty() || name.empty() || pin.empty() ||
             (activeText != "0" && activeText != "1")) {
             return false;
         }
@@ -144,6 +147,8 @@ bool saveAccounts(const vector<Account>& accounts, const string& filename) {
     if (!outputFile.is_open()) {
         return false;
     }
+
+    outputFile << "accountNumber,name,pin,balance,active\n";
 
     for (const Account& account : accounts) {
         outputFile << escapeCsvField(account.accountNumber) << ','

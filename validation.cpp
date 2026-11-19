@@ -62,3 +62,20 @@ bool parsePositiveAmount(const string& input, double& amount) {
         return false;
     }
 }
+
+bool parseNonNegativeAmount(const string& input, double& amount) {
+    try {
+        size_t charactersRead = 0;
+        double parsedAmount = stod(input, &charactersRead);
+
+        if (charactersRead != input.length() ||
+            !isfinite(parsedAmount) || parsedAmount < 0.0) {
+            return false;
+        }
+
+        amount = parsedAmount;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}

@@ -1,1 +1,4 @@
-timestamp,type,fromAccount,toAccount,amount
+type,sourceAccount,destinationAccount,amount
+TRANSFER,100001,100002,300.00
+WITHDRAW,100002,-,300.00
+TRANSFER,100001,100002,300.00
